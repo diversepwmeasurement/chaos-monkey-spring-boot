@@ -1,46 +1,55 @@
-name: Release
-
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "The version (3.X.X) to be released"
-        required: true
-
-
 jobs:
   release:
-    runs-on: ubuntu-latest
     env:
       VERSION: ${{ github.event.inputs.version }}
-
+    runs-on: self-hosted
     steps:
-      - name: Validate is valid version
-        run: npx -y semver $VERSION
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # need git history for spotless license header
-          token: ${{ secrets.GH_TOKEN_CHAOS_BOT }}
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 17
-      - name: Configure Git
-        run: |
-          git config user.email "54942692+ChaosMonkeyBot@users.noreply.github.com"
-          git config user.name "Chaos Monkey Bot"
-      - name: Bump Version
-        run: ./mvnw versions:set-property -Dproperty=revision -DnewVersion=$VERSION
-      - name: Tag
-        run: |
-          git commit -m "Release $VERSION" -o pom.xml
-          git tag -a -m "Release $VERSION" v$VERSION
-      - name: Move to next Snapshot
-        run: |
-          NEXT_VERSION=`npx -y semver $VERSION -i`-SNAPSHOT
-          ./mvnw versions:set-property -Dproperty=revision -DnewVersion=$NEXT_VERSION
-          cp chaos-monkey-docs/src/main/asciidoc/changes.adoc.template chaos-monkey-docs/src/main/asciidoc/changes.adoc
-          git commit -m "Prepare for next version: $NEXT_VERSION" -o pom.xml chaos-monkey-docs/src/main/asciidoc/changes.adoc
-      - name: Push (Release Tag + Main Branch)
-        run: git push --follow-tags
+    - continue-on-error: true
+      name: Validate is valid version
+      run: npx -y semver $VERSION
+    - continue-on-error: true
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GH_TOKEN_CHAOS_BOT }}
+    - continue-on-error: true
+      name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+    - continue-on-error: true
+      name: Configure Git
+      run: 'git config user.email "54942692+ChaosMonkeyBot@users.noreply.github.com"
+
+        git config user.name "Chaos Monkey Bot"
+
+        '
+    - continue-on-error: true
+      name: Bump Version
+      run: ./mvnw versions:set-property -Dproperty=revision -DnewVersion=$VERSION
+    - continue-on-error: true
+      name: Tag
+      run: 'git commit -m "Release $VERSION" -o pom.xml
+
+        git tag -a -m "Release $VERSION" v$VERSION
+
+        '
+    - continue-on-error: true
+      name: Move to next Snapshot
+      run: 'NEXT_VERSION=`npx -y semver $VERSION -i`-SNAPSHOT
+
+        ./mvnw versions:set-property -Dproperty=revision -DnewVersion=$NEXT_VERSION
+
+        cp chaos-monkey-docs/src/main/asciidoc/changes.adoc.template chaos-monkey-docs/src/main/asciidoc/changes.adoc
+
+        git commit -m "Prepare for next version: $NEXT_VERSION" -o pom.xml chaos-monkey-docs/src/main/asciidoc/changes.adoc
+
+        '
+    - continue-on-error: true
+      name: Push (Release Tag + Main Branch)
+      run: git push --follow-tags
+name: Release
+on:
+  repository_dispatch:
+    types: trigger-ga___release.yml
